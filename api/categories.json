@@ -2,7 +2,7 @@
     {
         "id": "course",
         "name": "Courses",
-        "icon": "fas fa-random"
+        "icon": "fas fa-graduation-cap"
     },
     {
         "id": "subscription",
