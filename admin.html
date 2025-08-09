@@ -451,7 +451,7 @@
                 sessionStorage.setItem('isAdminAuthenticated', 'true');
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('dashboard-content').style.display = 'block';
-                fetchOrders();
+                checkAuth(); // Call checkAuth to fetch all data
             } else {
                 alert('Incorrect password. Please try again.');
             }
@@ -464,6 +464,8 @@
 
         let allProductsData = [];
         let allCouponsData = [];
+        let allIcons = [];
+        let categoryIconTrack = {};
 
         function checkAuth() {
             if (sessionStorage.getItem('isAdminAuthenticated') === 'true') {
@@ -473,7 +475,7 @@
                 fetchCategories();
                 fetchProducts();
                 fetchCoupons();
-                fetchPendingReviews();
+                fetchAdminReviews();
             }
         }
 
@@ -522,6 +524,49 @@
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        async function changeIcon(categoryId, categoryName) {
+            if (allIcons.length === 0) {
+                try {
+                    const response = await fetch('api/get_icons.php?t=' + new Date().getTime());
+                    allIcons = await response.json();
+                } catch (error) {
+                    console.error('Error fetching icons:', error);
+                    alert('Could not fetch icons. Please try again.');
+                    return;
+                }
+            }
+
+            const row = document.querySelector(`#categories-tbody tr[data-id='${categoryId}']`);
+            const iconCell = row.querySelector("td[data-field='icon']");
+            const currentIcon = iconCell.textContent.trim().split(' ').slice(1).join(' ');
+
+            let currentIndex = allIcons.indexOf(currentIcon);
+            if (currentIndex === -1) {
+                const randomStartIndex = Math.floor(Math.random() * allIcons.length);
+                currentIndex = randomStartIndex;
+            }
+
+            currentIndex = (currentIndex + 1) % allIcons.length;
+            const newIcon = allIcons[currentIndex];
+
+            iconCell.innerHTML = `<i class="${newIcon}"></i> ${newIcon}`;
+
+            const actionCell = row.querySelector("td:last-child");
+            const changeButton = actionCell.querySelector("button:nth-child(2)");
+            changeButton.textContent = "Save Icon";
+            changeButton.setAttribute("onclick", `saveIcon('${categoryId}')`);
+        }
+
+        async function saveIcon(categoryId) {
+            const row = document.querySelector(`#categories-tbody tr[data-id='${categoryId}']`);
+            const nameCell = row.querySelector("td[data-field='name']");
+            const iconCell = row.querySelector("td[data-field='icon']");
+            const newIcon = iconCell.querySelector("i").getAttribute("class");
+            const categoryName = nameCell.textContent;
+
+            await updateCategory(categoryId, categoryName, newIcon);
         }
 
         function showCouponModal(couponId = null) {
@@ -1006,6 +1051,7 @@
                     <td data-field="icon"><i class="${cat.icon}"></i> ${cat.icon}</td>
                     <td>
                         <button class="btn" onclick="editCategory('${cat.id}')">Edit</button>
+                        <button class="btn" onclick="changeIcon('${cat.id}', '${cat.name}')">Change Icon</button>
                         <button class="btn" onclick="deleteCategory('${cat.id}')">Delete</button>
                     </td>
                 `;
