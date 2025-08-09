@@ -452,6 +452,10 @@
                 document.getElementById('login-container').style.display = 'none';
                 document.getElementById('dashboard-content').style.display = 'block';
                 fetchOrders();
+                fetchCategories();
+                fetchProducts();
+                fetchCoupons();
+                fetchAdminReviews();
             } else {
                 alert('Incorrect password. Please try again.');
             }
@@ -473,7 +477,7 @@
                 fetchCategories();
                 fetchProducts();
                 fetchCoupons();
-                fetchPendingReviews();
+                fetchAdminReviews();
             }
         }
 
@@ -1001,12 +1005,14 @@
             categories.forEach(cat => {
                 const row = document.createElement('tr');
                 row.setAttribute('data-id', cat.id);
+                row.setAttribute('data-icon-index', '0');
                 row.innerHTML = `
                     <td data-field="name">${cat.name}</td>
                     <td data-field="icon"><i class="${cat.icon}"></i> ${cat.icon}</td>
                     <td>
                         <button class="btn" onclick="editCategory('${cat.id}')">Edit</button>
                         <button class="btn" onclick="deleteCategory('${cat.id}')">Delete</button>
+                        <button class="btn" onclick="changeIcon('${cat.id}', '${cat.name}')">Change Icon</button>
                     </td>
                 `;
                 tbody.appendChild(row);
@@ -1037,18 +1043,54 @@
             }
         });
 
+        async function changeIcon(id, categoryName) {
+            const row = document.querySelector(`#categories-tbody tr[data-id='${id}']`);
+            const iconCell = row.querySelector("td[data-field='icon']");
+
+            // Fetch icons if they haven't been fetched for this row yet
+            if (!row.dataset.icons) {
+                try {
+                    const response = await fetch(`api/get_icons.php?category_name=${encodeURIComponent(categoryName)}`);
+                    const icons = await response.json();
+                    if (icons.length > 0) {
+                        row.dataset.icons = JSON.stringify(icons);
+                    } else {
+                        alert("No related icons found for this category. Using full list.");
+                        // fallback to all icons
+                        const response_all = await fetch(`api/get_icons.php`);
+                        const all_icons = await response_all.json();
+                        row.dataset.icons = JSON.stringify(all_icons);
+                    }
+                } catch (error) {
+                    console.error('Error fetching icons:', error);
+                    alert('Could not fetch icons.');
+                    return;
+                }
+            }
+
+            const icons = JSON.parse(row.dataset.icons);
+            let currentIndex = parseInt(row.dataset.iconIndex || '0');
+
+            // Cycle to the next icon
+            currentIndex = (currentIndex + 1) % icons.length;
+            row.dataset.iconIndex = currentIndex;
+
+            const newIcon = icons[currentIndex];
+            iconCell.innerHTML = `<i class="${newIcon}"></i> ${newIcon}`;
+        }
+
         function editCategory(id) {
             const row = document.querySelector(`#categories-tbody tr[data-id='${id}']`);
             const nameCell = row.querySelector("td[data-field='name']");
             const iconCell = row.querySelector("td[data-field='icon']");
             const currentName = nameCell.textContent;
-            const currentIcon = iconCell.textContent.split(' ')[1];
+            // The icon is now whatever is currently displayed in the cell.
+            const currentIcon = iconCell.textContent.trim();
 
             const newName = prompt("Enter new name:", currentName);
-            const newIcon = prompt("Enter new icon:", currentIcon);
 
-            if (newName && newIcon) {
-                updateCategory(id, newName, newIcon);
+            if (newName) {
+                updateCategory(id, newName, currentIcon);
             }
         }
 

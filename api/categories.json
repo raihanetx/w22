@@ -16,8 +16,8 @@
     },
     {
         "id": "ebook",
-        "name": "Ebook",
-        "icon": "fas fa-book-open"
+        "name": "Digital Books",
+        "icon": "fas fa-user"
     },
     {
         "id": "resource",
